@@ -1,6 +1,6 @@
 import { buildProgramFromSources, loadShadersFromURLS, setupWebGL } from "../../libs/utils.js";
-import { ortho, lookAt, flatten, vec3, vec4, subtract, perspective, transpose, inverse, rotate, add, mult } from "../../libs/MV.js";
-import {modelView, loadMatrix, multRotationY, multScale, multTranslation, popMatrix, pushMatrix} from "../../libs/stack.js";
+import { ortho, lookAt, flatten, vec3, vec4, subtract, perspective, normalMatrix, transpose, inverse, rotate, add, mult } from "../../libs/MV.js";
+import {modelView, loadMatrix, multRotationY, multScale, multTranslation, popMatrix, pushMatrix } from "../../libs/stack.js";
 
 import * as SPHERE from '../../libs/sphere.js';
 import * as CUBE from '../../libs/cube.js';
@@ -9,13 +9,7 @@ import * as dat from '../../libs/dat.gui.module.js';
 
 /** @type WebGLRenderingContext */
 let gl;
-
-let move = false;
-
-let x1,y1;
-
-let mode; 
-//let normal = vec3(0,0,0);             
+let mode;            
 
 let aspect;
 let mProjection;
@@ -45,14 +39,34 @@ function setup(shaders)
         at: vec3(0,0,0),
         up: vec3(0,1,0),
         fovy: 45,
-        aspect: 1,
-        near: 0.1,
+        near: 1.5,
         far: 20
     }
 
     let options = {
-        wireframe: false,
-        normals: true
+        backface_culling: true,
+        depth_test: true,
+        show_lights: true
+    }
+
+    let light1 = {
+        pos: vec3(0,1,0),
+        ambient: [75,75,75],
+        diffuse: [175,175,175],
+        specular: [255,255,255],
+        directional: false,
+        active: true
+    }
+
+    let material = {
+        Ka: [0,25,0],
+        Kd: [0,100,0],
+        Ks: [255,255,255],
+        shininess: 50
+    }
+
+    let object = {
+        object: "Sphere"
     }
 
     mView = lookAt(camera.eye, camera.at, camera.up);
@@ -60,15 +74,23 @@ function setup(shaders)
     mProjection = perspective(camera.fovy, aspect, camera.near, camera.far);
 
     const gui = new dat.GUI();
+    const guiObject = new dat.GUI();
+
+    guiObject.add(object, "object", ['Cube', 'Sphere', 'Cylinder', 'Pyramid', 'Torus']);
+
+    const materialGui = guiObject.addFolder("material");
+    materialGui.addColor(material, "Ka");
+    materialGui.addColor(material, "Kd");
+    materialGui.addColor(material, "Ks");
+    materialGui.add(material, "shininess").min(1.0);
 
     const optionsGui = gui.addFolder("options");
-    optionsGui.add(options, "wireframe");
-    optionsGui.add(options, "normals");
+    optionsGui.add(options, "backface_culling").name("backface culling");
+    optionsGui.add(options, "depth_test");
+    optionsGui.add(options, "show_lights");
 
     const cameraGui = gui.addFolder("camera");
     cameraGui.add(camera, "fovy").min(1).max(100).step(1).listen();
-    cameraGui.add(camera, "aspect").min(0).max(10).listen().domElement.style.pointerEvents = "none";
-  
 
     cameraGui.add(camera, "near").min(0.1).max(20).listen().onChange(function (v){
         camera.near = Math.min(camera.far-0.5, v);
@@ -79,19 +101,36 @@ function setup(shaders)
     });
 
     const eye = cameraGui.addFolder("eye");
-    eye.add(camera.eye, 0).step(0.05).listen().domElement.style.pointerEvents = "none";
-    eye.add(camera.eye, 1).step(0.05).listen().domElement.style.pointerEvents = "none";
-    eye.add(camera.eye, 2).step(0.05).listen().domElement.style.pointerEvents = "none";
+    eye.add(camera.eye, 0).step(0.05).listen();
+    eye.add(camera.eye, 1).step(0.05).listen();
+    eye.add(camera.eye, 2).step(0.05).listen();
 
     const at = cameraGui.addFolder("at");
-    at.add(camera.at, 0).step(0.05).listen().domElement.style.pointerEvents = "none";
-    at.add(camera.at, 1).step(0.05).listen().domElement.style.pointerEvents = "none";
-    at.add(camera.at, 2).step(0.05).listen().domElement.style.pointerEvents = "none";
+    at.add(camera.at, 0).step(0.05).listen();
+    at.add(camera.at, 1).step(0.05).listen();
+    at.add(camera.at, 2).step(0.05).listen();
 
     const up = cameraGui.addFolder("up");
-    up.add(camera.up, 0).step(0.05).listen().domElement.style.pointerEvents = "none";
-    up.add(camera.up, 1).step(0.05).listen().domElement.style.pointerEvents = "none";
-    up.add(camera.up, 2).step(0.05).listen().domElement.style.pointerEvents = "none";
+    up.add(camera.up, 0).min(-1).max(1).step(0.01).listen();;
+    up.add(camera.up, 1).min(-1).max(1).step(0.01).listen();;
+    up.add(camera.up, 2).min(-1).max(1).step(0.01).listen();;
+
+    const lightsGui = gui.addFolder("Lights");
+    
+    const light1Gui = lightsGui.addFolder("Light1");
+
+    const position1 = light1Gui.addFolder("position");
+    position1.add(light1.pos, 0).step(0.05).listen();
+    position1.add(light1.pos, 1).step(0.05).listen();
+    position1.add(light1.pos, 2).step(0.05).listen();
+
+    position1.addColor(light1, "ambient");
+    position1.addColor(light1, "diffuse");
+    position1.addColor(light1, "specular");
+
+    position1.add(light1, "directional");
+    position1.add(light1, "active");
+
 
     
     resize_canvas();
@@ -115,69 +154,19 @@ function setup(shaders)
 
     });
 
-    window.addEventListener('mousedown', e => {
-        x1 = e.offsetX;
-        y1 = e.offsetY;
-        move = true;
-        
-    });
-
-    window.addEventListener('mousemove', e => {
-        let x2, y2;
-        if(move){
-            x2 = e.offsetX;
-            y2 = e.offsetY;
-
-            if(x1 != x2 || y1 != y2){
-                moveCamera(x1, y1, x2, y2); 
-            }
-
-            x1 = x2;
-            y1 = y2;
-        }
-        
-    
-    });
-
-    window.addEventListener('mouseup', e => {
-        x1 = 0;
-        y1 = 0;
-        move = false;
-    });
-
-    function moveCamera(x1, y1, x2, y2){
-        let v1 = subtract(camera.eye, camera.at);
-        let v2 = subtract(camera.up, camera.eye);
-
-        let e = vec4(v1[0], v1[1], v1[2], 0);
-        let p = vec4(v2[0], v2[1], v2[2], 0);
-
-        let pat = vec4(camera.at[0], camera.at[1], camera.at[2], 1);
-        //let peye = vec4(camera.eye[0], camera.eye[1], camera.eye[2], 1);
-
-        let eye = add(pat, mult(inverse(mView), mult(rotate(1, vec3(y1-y2, x1-x2, 0)), mult(mView, e))));
-        let up = add(eye, mult(inverse(mView), mult(mView, p)));
-
-        camera.eye[0] = eye[0];
-        camera.eye[1] = eye[1];
-        camera.eye[2] = eye[2];
-        
-        camera.up[0] = up[0];
-        camera.up[1] = up[1];
-        camera.up[2] = up[2];
-
-    }
-
 
     function update_mView(){
         mView = lookAt(camera.eye, camera.at, camera.up);
     }
 
     function update_camera(){
-
         mProjection = perspective(camera.fovy, aspect, camera.near, camera.far);
     }
-        
+      
+    function uploadModelView(){
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mModelView"), false, flatten(modelView()));
+    }
+
 
     function resize_canvas(event)
     {
@@ -190,38 +179,17 @@ function setup(shaders)
         mProjection = perspective(camera.fovy, aspect, camera.near, camera.far);
     }
 
-    function uploadModelView()
-    {
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mModelView"), false, flatten(modelView()));
-    }
 
-    function cube()
-    {
-        //multTranslation([0,0,-5]);
-        //multScale([2, 2, 2]);
-        //multRotationY(360*time/SUN_DAY);
+    function draw() {
 
         uploadModelView();
 
-        CUBE.draw(gl, program, gl.LINES);
-    }
 
-    function sphere()
-    {
-        //multTranslation([0,0,-5]);
-        //multScale([0.3, 0.3, 0.3]);
-        
-        //multRotationY(360*time/SUN_DAY);
-
-        uploadModelView();
 
         SPHERE.draw(gl, program, mode);
     }
 
-    
-
-    function render()
-    {
+    function render(){
       
         window.requestAnimationFrame(render);
 
@@ -230,37 +198,19 @@ function setup(shaders)
         gl.useProgram(program);
 
         update_mView();
-        update_options();
         update_camera();
 
         loadMatrix(mView);
         
-        //let mNormals = transpose(inverse(modelView()));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mNormals"), false, flatten(normalMatrix(modelView()))); 
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mModelView"), false, flatten(modelView()));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mProjection"), false, flatten(mProjection)); 
         gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), options.normals);
         
 
-        pushMatrix();
-            cube();
-        popMatrix();
-        pushMatrix();
-            sphere();
-        popMatrix();
         
     }
 
-
-    function update_options(){
-
-        if(options.wireframe){
-            mode = gl.LINES; 
-        } else {
-            mode = gl.TRIANGLES;
-        }
-
-    }
 }
 
 const urls = ["shader.vert", "shader.frag"];
