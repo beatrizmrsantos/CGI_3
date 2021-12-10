@@ -97,6 +97,10 @@ function setup(shaders)
 
     addCameraFields();
 
+    for(let i = 0; i < NLIGHTS; i++){
+        lights[i] = light;
+    }
+
     addLights();
 
 
@@ -190,14 +194,13 @@ function setup(shaders)
         const lightsGui = gui.addFolder("Lights");
 
         for(let i=0; i < NLIGHTS; i++){
-            lights[i] = light;
     
             const lightGui = lightsGui.addFolder("Light" + (i+1));
     
             const position = lightGui.addFolder("position");
-            position.add(lights[i].pos, 0).name("x").step(0.05).listen();
-            position.add(lights[i].pos, 1).name("y").step(0.05).listen();
-            position.add(lights[i].pos, 2).name("z").step(0.05).listen();
+            position.add(lights[i].pos, 0).name("x").step(0.05);
+            position.add(lights[i].pos, 1).name("y").step(0.05);
+            position.add(lights[i].pos, 2).name("z").step(0.05);
     
             position.addColor(lights[i], "Ia").name("ambient");
             position.addColor(lights[i], "Id").name("diffuse");
@@ -259,6 +262,17 @@ function setup(shaders)
         uploadModelView();
         CUBE.draw(gl, program, mode);
 
+    }
+
+    function drawLight(i){
+
+        let lightpos = lights[i].pos;
+
+        multTranslation([lightpos[0],lightpos[1],lightpos[2]]);
+        multScale([0.07,0.07,0.07]);
+
+        uploadModelView();
+        SPHERE.draw(gl, program, mode);
     }
 
     function optionsEnabler(){
@@ -325,8 +339,18 @@ function setup(shaders)
         pushMatrix();
             drawFloor();
         popMatrix();
+        pushMatrix();
             draw();
-        
+        popMatrix();
+
+        for(let i = 0; i <NLIGHTS; i++){
+            pushMatrix();
+                drawLight(i);
+            popMatrix();
+        }
+
+        //console.log(lights[0].isActive);
+        //console.log(lights[1].isActive);
     }
 
     function putUniformMaterial(){
