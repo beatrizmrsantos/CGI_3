@@ -62,15 +62,6 @@ function setup(shaders)
         show_lights: true
     }
 
-    let light = {
-        pos: vec3(0,1,0),
-        Ia: [75,75,75],
-        Id: [175,175,175],
-        Is: [255,255,255],
-        isDirectional: false,
-        isActive: true
-    }
-
     let material = {
         Ka: [0,25,0],
         Kd: [0,100,0],
@@ -96,10 +87,6 @@ function setup(shaders)
     addOptionsFields();
 
     addCameraFields();
-
-    for(let i = 0; i < NLIGHTS; i++){
-        lights[i] = light;
-    }
 
     addLights();
 
@@ -192,6 +179,20 @@ function setup(shaders)
 
     function addLights(){
         const lightsGui = gui.addFolder("Lights");
+
+        for(let i = 0; i < NLIGHTS; i++){
+            let light = {
+                pos: vec3(0,1,0),
+                Ia: [75,75,75],
+                Id: [175,175,175],
+                Is: [255,255,255],
+                isDirectional: false,
+                isActive: true
+            };
+    
+            lights[i] = light;
+        }
+    
 
         for(let i=0; i < NLIGHTS; i++){
     
@@ -293,9 +294,6 @@ function setup(shaders)
             gl.disable(gl.DEPTH_TEST);
         }
 
-        if(options.show_lights){
-
-        }
         
     }
 
@@ -343,14 +341,17 @@ function setup(shaders)
             draw();
         popMatrix();
 
-        for(let i = 0; i <NLIGHTS; i++){
-            pushMatrix();
-                drawLight(i);
-            popMatrix();
+        if(options.show_lights){
+            for(let i = 0; i <NLIGHTS; i++){
+                pushMatrix();
+                    drawLight(i);
+                popMatrix();
+            }
         }
+ 
 
-        //console.log(lights[0].isActive);
-        //console.log(lights[1].isActive);
+        console.log(lights[0].isActive);
+        console.log(lights[1].isActive);
     }
 
     function putUniformMaterial(){
