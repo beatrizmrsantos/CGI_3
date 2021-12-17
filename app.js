@@ -181,8 +181,9 @@ function setup(shaders)
         const lightsGui = gui.addFolder("Lights");
 
         for(let i = 0; i < NLIGHTS; i++){
+            let x = -1;
             let light = {
-                pos: vec3(0,1,0),
+                pos: vec3(x + i,1,0),
                 Ia: [75,75,75],
                 Id: [175,175,175],
                 Is: [255,255,255],
@@ -231,6 +232,8 @@ function setup(shaders)
 
         multTranslation([0,0.5*0.1,0]);
 
+        gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), true);
+
         uploadModelView();
 
         switch (object.object) {
@@ -260,6 +263,8 @@ function setup(shaders)
         multTranslation([0,-0.5,0]);
         multScale([3,0.1,3]);
 
+        gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), true);
+
         uploadModelView();
         CUBE.draw(gl, program, mode);
 
@@ -271,6 +276,8 @@ function setup(shaders)
 
         multTranslation([lightpos[0],lightpos[1],lightpos[2]]);
         multScale([0.07,0.07,0.07]);
+
+        gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), false);
 
         uploadModelView();
         SPHERE.draw(gl, program, mode);
@@ -328,7 +335,6 @@ function setup(shaders)
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mNormals"), false, flatten(normalMatrix(modelView()))); 
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mModelView"), false, flatten(modelView()));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mProjection"), false, flatten(mProjection)); 
-        gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), true);
         gl.uniform1i(gl.getUniformLocation(program, "uNLights"), NLIGHTS);
         putIniformLights();
         putUniformMaterial();
