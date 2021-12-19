@@ -232,7 +232,7 @@ function setup(shaders)
 
         multTranslation([0,0.5*0.1,0]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), true);
+        gl.uniform1i(gl.getUniformLocation(program, "isLight"), false);
 
         uploadModelView();
 
@@ -263,7 +263,7 @@ function setup(shaders)
         multTranslation([0,-0.5,0]);
         multScale([3,0.1,3]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), true);
+        gl.uniform1i(gl.getUniformLocation(program, "isLight"), false);
 
         uploadModelView();
         CUBE.draw(gl, program, mode);
@@ -277,7 +277,7 @@ function setup(shaders)
         multTranslation([lightpos[0],lightpos[1],lightpos[2]]);
         multScale([0.07,0.07,0.07]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "uUseNormals"), false);
+        gl.uniform1i(gl.getUniformLocation(program, "isLight"), true);
 
         uploadModelView();
         SPHERE.draw(gl, program, mode);
@@ -332,9 +332,13 @@ function setup(shaders)
 
         loadMatrix(mView);
         
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mNormals"), false, flatten(normalMatrix(modelView()))); 
+        
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mModelView"), false, flatten(modelView()));
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mProjection"), false, flatten(mProjection)); 
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mNormals"), false, flatten(normalMatrix(modelView()))); 
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mView"), false, flatten(mView));
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mViewNormals"), false, flatten(normalMatrix(mView)));  
+        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mProjection"), false, flatten(mProjection));
+        
         gl.uniform1i(gl.getUniformLocation(program, "uNLights"), NLIGHTS);
         putIniformLights();
         putUniformMaterial();
@@ -355,25 +359,22 @@ function setup(shaders)
             }
         }
  
-
-        console.log(lights[0].isActive);
-        console.log(lights[1].isActive);
     }
 
     function putUniformMaterial(){
-        gl.uniform1i(gl.getUniformLocation(program, "uMaterial.Ka"), material.Ka);
-        gl.uniform1i(gl.getUniformLocation(program, "uMaterial.Kd"), material.Kd);
-        gl.uniform1i(gl.getUniformLocation(program, "uMaterial.Ks"), material.Ks);
-        gl.uniform1i(gl.getUniformLocation(program, "uMaterial.shininess"), material.shininess);
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ka"), material.Ka);
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Kd"), material.Kd);
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ks"), material.Ks);
+        gl.uniform1f(gl.getUniformLocation(program, "uMaterial.shininess"), material.shininess);
 
     }
 
     function putIniformLights(){
         for(let i = 0; i < NLIGHTS; i++){
-            gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].pos"), lights[i].pos);
-            gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].Ia"), lights[i].Ia);
-            gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].Id"), lights[i].Is);
-            gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].Is"), lights[i].Is);
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].pos"), lights[i].pos);
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Ia"), lights[i].Ia);
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Id"), lights[i].Is);
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Is"), lights[i].Is);
             gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].isDirectional"), lights[i].isDirectional);
             gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].isActive"), lights[i].isActive);
         }
