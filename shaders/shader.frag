@@ -47,7 +47,7 @@ void main() {
 
         } else {
 
-            vec3 Ifinal = vec3(0.05, 0.05, 0.05);
+            vec3 Ifinal = vec3(0.0, 0.0, 0.0);
 
             vec3 N = normalize(fNormal);
 
