@@ -11,9 +11,10 @@ varying vec3 fViewer;
 
 uniform mat4 mView; // view transformation
 uniform mat4 mViewNormals; // view transf. for vectors
-//uniform mat4 mNormals; // model-view transformation for normals
 
-uniform bool isLight;
+uniform vec3 uColor;
+
+uniform bool uIsLight;
 
 const int MAX_LIGHTS = 8;
 
@@ -40,13 +41,13 @@ uniform MaterialInfo uMaterial; // The material of the object being drawn
 
 void main() {
 
-    if( isLight ){
+    if( uIsLight ){
 
             gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 
         } else {
 
-            vec3 Ifinal = vec3(0.0, 0.0, 0.0);
+            vec3 Ifinal = vec3(0.05, 0.05, 0.05);
 
             vec3 N = normalize(fNormal);
 

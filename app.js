@@ -232,7 +232,8 @@ function setup(shaders)
 
         multTranslation([0,0.5*0.1,0]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "isLight"), false);
+        gl.uniform1i(gl.getUniformLocation(program, "uIsLight"), false);
+        gl.uniform3fv(gl.getUniformLocation(program, "uColor"), vec3(0.0,0.0,1.0));
 
         uploadModelView();
 
@@ -263,7 +264,8 @@ function setup(shaders)
         multTranslation([0,-0.5,0]);
         multScale([3,0.1,3]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "isLight"), false);
+        gl.uniform1i(gl.getUniformLocation(program, "uIsLight"), false);
+        gl.uniform3fv(gl.getUniformLocation(program, "uColor"), vec3(1.0,0.0,0.0));
 
         uploadModelView();
         CUBE.draw(gl, program, mode);
@@ -277,7 +279,7 @@ function setup(shaders)
         multTranslation([lightpos[0],lightpos[1],lightpos[2]]);
         multScale([0.07,0.07,0.07]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "isLight"), true);
+        gl.uniform1i(gl.getUniformLocation(program, "uIsLight"), true);
 
         uploadModelView();
         SPHERE.draw(gl, program, mode);
