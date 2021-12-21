@@ -24,7 +24,7 @@ let nLights = 4;   //number of light being draw: it can be change
 
 const MAX_LIGHTS = 8;
 const ESCALE_RGB = 1/255;
-const LIGHT_ESCALE = 0.07;
+const LIGHT_SCALE = 0.07;
 const FLOOR_HEIGHT = 0.1;
 const FLOOR_LENGTH = 3.0;
 const FLOOR_TRANSLATION = 0.5;
@@ -291,7 +291,7 @@ function setup(shaders)
         let lightpos = lights[i].pos;
 
         multTranslation([lightpos[0],lightpos[1],lightpos[2]]);
-        multScale([LIGHT_ESCALE, LIGHT_ESCALE, LIGHT_ESCALE]);
+        multScale([LIGHT_SCALE, LIGHT_SCALE, LIGHT_SCALE]);
 
         gl.uniform3fv(gl.getUniformLocation(program2, "uColor"), scale(ESCALE_RGB, lights[i].Is));
 
@@ -387,9 +387,9 @@ function setup(shaders)
     }
 
     function putUniformMaterial(m){
-        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ka"), scale(ESCALE_RGB,m.Ka));
-        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Kd"), scale(ESCALE_RGB,m.Kd));
-        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ks"), scale(ESCALE_RGB,m.Ks));
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ka"), flatten(scale(ESCALE_RGB,m.Ka)));
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Kd"), flatten(scale(ESCALE_RGB,m.Kd)));
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ks"), flatten(scale(ESCALE_RGB,m.Ks)));
         gl.uniform1f(gl.getUniformLocation(program, "uMaterial.shininess"), m.shininess);
 
     }
@@ -398,10 +398,10 @@ function setup(shaders)
         gl.uniform1i(gl.getUniformLocation(program, "uNLights"), nLights);
 
         for(let i = 0; i < nLights; i++){
-            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].pos"), lights[i].pos);
-            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Ia"), scale(ESCALE_RGB,lights[i].Ia));
-            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Id"), scale(ESCALE_RGB,lights[i].Is));
-            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Is"), scale(ESCALE_RGB, lights[i].Is));
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].pos"), flatten(lights[i].pos));
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Ia"), flatten(scale(ESCALE_RGB,lights[i].Ia)));
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Id"), flatten(scale(ESCALE_RGB,lights[i].Is)));
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Is"), flatten(scale(ESCALE_RGB, lights[i].Is)));
             gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].isDirectional"), lights[i].isDirectional);
             gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].isActive"), lights[i].isActive);
         }
