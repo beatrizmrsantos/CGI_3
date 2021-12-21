@@ -5,8 +5,6 @@ uniform mat4 mModelView;// model-view transformation
 uniform mat4 mProjection; // projection matrix
 uniform mat4 mNormals; // model-view transformation for normals
 
-const int MAX_LIGHTS = 8;
-
 varying vec3 fNormal;
 varying vec3 fPosition;
 varying vec3 fViewer;
