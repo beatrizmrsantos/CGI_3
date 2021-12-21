@@ -1,8 +1,7 @@
-precision mediump float;
+precision highp float;
 
 varying vec3 fNormal;
 varying vec3 fPosition;
-varying vec3 fLight;
 varying vec3 fViewer;
 
 uniform mat4 mView; // view transformation
@@ -45,30 +44,23 @@ void main() {
         if(uLight[i].isActive){
  
             vec3 L;
-            vec4 posLight;
 
             if(uLight[i].isDirectional){ 
-                posLight = vec4(uLight[i].pos, 0.0);
-                L = normalize((mViewNormals * posLight).xyz);
+                L = normalize((mViewNormals * vec4(uLight[i].pos, 0.0)).xyz);
             } else {
-                posLight = vec4(uLight[i].pos, 1.0);
-                L = normalize((mView * posLight).xyz - fPosition);
+                L = normalize((mView * vec4(uLight[i].pos, 1.0)).xyz - fPosition);
             }
                     
             vec3 R = normalize(reflect(-L,N));
-
 
             vec3 ambientColor = uLight[i].Ia * uMaterial.Ka;
             vec3 diffuseColor = uLight[i].Id * uMaterial.Kd;
             vec3 specularColor = uLight[i].Is * uMaterial.Ks;
 
-
             float diffuseFactor = max( dot(L,N), 0.0 );
-
             vec3 diffuse = diffuseFactor * diffuseColor;
 
             float specularFactor = pow(max(dot(V,R), 0.0), uMaterial.shininess);
-
             vec3 specular = specularFactor * specularColor;
 
             if( dot(L,N) < 0.0 ) {
