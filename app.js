@@ -1,5 +1,5 @@
 import { buildProgramFromSources, loadShadersFromURLS, setupWebGL } from "../../libs/utils.js";
-import { ortho, lookAt, flatten, vec3, vec4, subtract, perspective, normalMatrix, transpose, inverse, rotate, add, mult } from "../../libs/MV.js";
+import { ortho, scale, lookAt, flatten, vec3, vec4, subtract, perspective, normalMatrix, transpose, inverse, rotate, add, mult } from "../../libs/MV.js";
 import {modelView, loadMatrix, multRotationY, multScale, multTranslation, popMatrix, pushMatrix } from "../../libs/stack.js";
 
 import * as SPHERE from '../../libs/sphere.js';
@@ -20,7 +20,14 @@ let mView;
 
 let lights = [];
 
-const NLIGHTS = 3;
+let nLights = 4;
+
+const MAX_LIGHTS = 8;
+const ESCALE_RGB = 1/255;
+const LIGHT_ESCALE = 0.07;
+const FLOOR_HEIGHT = 0.1;
+const FLOOR_LENGTH = 3.0;
+const FLOOR_TRANSLATION = 0.5;
 
 
 function setup(shaders)
@@ -31,9 +38,9 @@ function setup(shaders)
     gl = setupWebGL(canvas);
 
     mode = gl.TRIANGLES;
-    //mode = gl.LINES;
 
     let program = buildProgramFromSources(gl, shaders["shader.vert"], shaders["shader.frag"]);
+    let program2 = buildProgramFromSources(gl, shaders["shader.vert"], shaders["shaderLight.frag"]);
 
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -69,9 +76,18 @@ function setup(shaders)
         shininess: 50
     }
 
+    let groundMaterial = {
+        Ka: [25,25,25],
+        Kd: [100,100,100],
+        Ks: [255,255,255],
+        shininess: 50
+    }
+
     let object = {
         object: 'Sphere'
     }
+
+    if(nLights > MAX_LIGHTS) nLights = MAX_LIGHTS;
 
     mView = lookAt(camera.eye, camera.at, camera.up);
 
@@ -179,9 +195,9 @@ function setup(shaders)
 
     function addLights(){
         const lightsGui = gui.addFolder("Lights");
-
-        for(let i = 0; i < NLIGHTS; i++){
-            let x = -1;
+        
+        for(let i = 0; i < nLights; i++){
+            let x = -(nLights - 1)/2;
             let light = {
                 pos: vec3(x + i,1,0),
                 Ia: [75,75,75],
@@ -195,7 +211,7 @@ function setup(shaders)
         }
     
 
-        for(let i=0; i < NLIGHTS; i++){
+        for(let i=0; i < nLights; i++){
     
             const lightGui = lightsGui.addFolder("Light" + (i+1));
     
@@ -204,12 +220,12 @@ function setup(shaders)
             position.add(lights[i].pos, 1).name("y").step(0.05);
             position.add(lights[i].pos, 2).name("z").step(0.05);
     
-            position.addColor(lights[i], "Ia").name("ambient");
-            position.addColor(lights[i], "Id").name("diffuse");
-            position.addColor(lights[i], "Is").name("specular");
+            lightGui.addColor(lights[i], "Ia").name("ambient");
+            lightGui.addColor(lights[i], "Id").name("diffuse");
+            lightGui.addColor(lights[i], "Is").name("specular");
     
-            position.add(lights[i], "isDirectional").name("directional");
-            position.add(lights[i], "isActive").name("active");
+            lightGui.add(lights[i], "isDirectional").name("directional");
+            lightGui.add(lights[i], "isActive").name("active");
     
         }
 
@@ -224,18 +240,16 @@ function setup(shaders)
         mProjection = perspective(camera.fovy, aspect, camera.near, camera.far);
     }
       
-    function uploadModelView(){
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mModelView"), false, flatten(modelView()));
+    function uploadModelView(p){
+        gl.uniformMatrix4fv(gl.getUniformLocation(p, "mModelView"), false, flatten(modelView()));
+        
     }
 
     function draw(){
 
-        multTranslation([0,0.5*0.1,0]);
+        multTranslation([0,FLOOR_TRANSLATION*FLOOR_HEIGHT,0]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "uIsLight"), false);
-        gl.uniform3fv(gl.getUniformLocation(program, "uColor"), vec3(0.0,0.0,1.0));
-
-        uploadModelView();
+        uploadModelView(program);
 
         switch (object.object) {
             case 'Cube':
@@ -261,13 +275,10 @@ function setup(shaders)
 
     function drawFloor(){
 
-        multTranslation([0,-0.5,0]);
-        multScale([3,0.1,3]);
+        multTranslation([0, -FLOOR_TRANSLATION, 0]);
+        multScale([FLOOR_LENGTH, FLOOR_HEIGHT, FLOOR_LENGTH]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "uIsLight"), false);
-        gl.uniform3fv(gl.getUniformLocation(program, "uColor"), vec3(1.0,0.0,0.0));
-
-        uploadModelView();
+        uploadModelView(program);
         CUBE.draw(gl, program, mode);
 
     }
@@ -277,12 +288,13 @@ function setup(shaders)
         let lightpos = lights[i].pos;
 
         multTranslation([lightpos[0],lightpos[1],lightpos[2]]);
-        multScale([0.07,0.07,0.07]);
+        multScale([LIGHT_ESCALE, LIGHT_ESCALE, LIGHT_ESCALE]);
 
-        gl.uniform1i(gl.getUniformLocation(program, "uIsLight"), true);
+        gl.uniform3fv(gl.getUniformLocation(program2, "uColor"), scale(ESCALE_RGB,lights[i].Is));
 
-        uploadModelView();
-        SPHERE.draw(gl, program, mode);
+        uploadModelView(program2);
+        
+        SPHERE.draw(gl, program2, mode);
     }
 
     function optionsEnabler(){
@@ -307,7 +319,7 @@ function setup(shaders)
     }
 
 
-    function resize_canvas(event)
+    function resize_canvas()
     {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
@@ -335,26 +347,31 @@ function setup(shaders)
         loadMatrix(mView);
         
         
-        gl.uniformMatrix4fv(gl.getUniformLocation(program, "mModelView"), false, flatten(modelView()));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mNormals"), false, flatten(normalMatrix(modelView()))); 
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mView"), false, flatten(mView));
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mViewNormals"), false, flatten(normalMatrix(mView)));  
         gl.uniformMatrix4fv(gl.getUniformLocation(program, "mProjection"), false, flatten(mProjection));
         
-        gl.uniform1i(gl.getUniformLocation(program, "uNLights"), NLIGHTS);
+        gl.uniform1i(gl.getUniformLocation(program, "uNLights"), nLights);
         putIniformLights();
-        putUniformMaterial();
-
         
+        putUniformMaterial(groundMaterial);
         pushMatrix();
             drawFloor();
         popMatrix();
+
+        putUniformMaterial(material);
         pushMatrix();
             draw();
         popMatrix();
 
+
+        gl.useProgram(program2);
+
+        gl.uniformMatrix4fv(gl.getUniformLocation(program2, "mProjection"), false, flatten(mProjection));
+
         if(options.show_lights){
-            for(let i = 0; i <NLIGHTS; i++){
+            for(let i = 0; i <nLights; i++){
                 pushMatrix();
                     drawLight(i);
                 popMatrix();
@@ -363,20 +380,20 @@ function setup(shaders)
  
     }
 
-    function putUniformMaterial(){
-        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ka"), material.Ka);
-        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Kd"), material.Kd);
-        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ks"), material.Ks);
-        gl.uniform1f(gl.getUniformLocation(program, "uMaterial.shininess"), material.shininess);
+    function putUniformMaterial(m){
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ka"), scale(ESCALE_RGB,m.Ka));
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Kd"), scale(ESCALE_RGB,m.Kd));
+        gl.uniform3fv(gl.getUniformLocation(program, "uMaterial.Ks"), scale(ESCALE_RGB,m.Ks));
+        gl.uniform1f(gl.getUniformLocation(program, "uMaterial.shininess"), m.shininess);
 
     }
 
     function putIniformLights(){
-        for(let i = 0; i < NLIGHTS; i++){
+        for(let i = 0; i < nLights; i++){
             gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].pos"), lights[i].pos);
-            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Ia"), lights[i].Ia);
-            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Id"), lights[i].Is);
-            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Is"), lights[i].Is);
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Ia"), scale(ESCALE_RGB,lights[i].Ia));
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Id"), scale(ESCALE_RGB,lights[i].Is));
+            gl.uniform3fv(gl.getUniformLocation(program, "uLight[" + i + "].Is"), scale(ESCALE_RGB, lights[i].Is));
             gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].isDirectional"), lights[i].isDirectional);
             gl.uniform1i(gl.getUniformLocation(program, "uLight[" + i + "].isActive"), lights[i].isActive);
         }
@@ -384,5 +401,5 @@ function setup(shaders)
 
 }
 
-const urls = ["shader.vert", "shader.frag"];
+const urls = ["shader.vert", "shader.frag", "shaderLight.frag"];
 loadShadersFromURLS(urls).then(shaders => setup(shaders))
