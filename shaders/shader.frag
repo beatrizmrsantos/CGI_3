@@ -63,10 +63,6 @@ void main() {
             float specularFactor = pow(max(dot(V,R), 0.0), uMaterial.shininess);
             vec3 specular = specularFactor * specularColor;
 
-            if( dot(L,N) < 0.0 ) {
-                specular = vec3(0.0, 0.0, 0.0);
-            }
-
             Ifinal = Ifinal + (ambientColor + diffuse + specular);
         }
 
